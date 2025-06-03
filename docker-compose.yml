@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bigdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+
+  spark:
+    image: bitnami/spark:latest
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_IP=spark
+      - SPARK_PUBLIC_DNS=localhost
+      - HADOOP_USER_NAME=root
+      - HADOOP_HOME=/opt/bitnami/spark/hadoop
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    volumes:
+      - ./spark-apps:/opt/bitnami/spark/apps
+      - ./data:/data:ro
+      - ./jars:/opt/bitnami/spark/external-jars
+    user: root
+
+  spark-worker:
+    image: bitnami/spark:latest
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_IP=spark-worker
+      - HADOOP_USER_NAME=root
+      - HADOOP_HOME=/opt/bitnami/spark/hadoop
+    volumes:
+      - ./spark-apps:/opt/bitnami/spark/apps
+      - ./data:/data:ro
+      - ./jars:/opt/bitnami/spark/external-jars
+    user: root
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    environment:
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=123456
+
+volumes:
+  postgres_data:
+  clickhouse_data:
